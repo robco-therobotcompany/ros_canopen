@@ -28,7 +28,7 @@ public:
     virtual bool enterModeAndWait(uint16_t mode) = 0;
     virtual bool isModeSupported(uint16_t mode) = 0;
     virtual uint16_t getMode() = 0;
-    virtual void registerDefaultModes(ObjectStorageSharedPtr storage) {}
+    virtual void registerDefaultModes(ObjectStorageSharedPtr storage, uint16_t cmd_offset) {}
 
     typedef std::shared_ptr<MotorBase> MotorBaseSharedPtr;
 

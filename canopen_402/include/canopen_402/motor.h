@@ -183,9 +183,9 @@ public:
 template<uint16_t ID, typename TYPE, uint16_t OBJ, uint8_t SUB, uint16_t CW_MASK> class ModeForwardHelper : public ModeTargetHelper<TYPE> {
     canopen::ObjectStorage::Entry<TYPE> target_entry_;
 public:
-    ModeForwardHelper(ObjectStorageSharedPtr storage) : ModeTargetHelper<TYPE>(ID) {
-        if(SUB) storage->entry(target_entry_, OBJ, SUB);
-        else storage->entry(target_entry_, OBJ);
+    ModeForwardHelper(ObjectStorageSharedPtr storage, uint16_t cmd_offset) : ModeTargetHelper<TYPE>(ID) {
+        if(SUB) storage->entry(target_entry_, OBJ + cmd_offset, SUB);
+        else storage->entry(target_entry_, OBJ + cmd_offset);
     }
     virtual bool read(const uint16_t &sw) { return true;}
     virtual bool write(Mode::OpModeAccesser& cw) {
@@ -223,8 +223,8 @@ public:
         CW_Immediate =  Command402::CW_Operation_mode_specific1,
         CW_Blending =  Command402::CW_Operation_mode_specific3,
     };
-    ProfiledPositionMode(ObjectStorageSharedPtr storage) : ModeTargetHelper(MotorBase::Profiled_Position) {
-        storage->entry(target_position_, 0x607A);
+    ProfiledPositionMode(ObjectStorageSharedPtr storage, uint16_t cmd_offset) : ModeTargetHelper(MotorBase::Profiled_Position) {
+        storage->entry(target_position_, 0x607A + cmd_offset);
     }
     virtual bool start() { sw_ = 0; last_target_= std::numeric_limits<double>::quiet_NaN(); return ModeTargetHelper::start(); }
     virtual bool read(const uint16_t &sw) { sw_ = sw; return (sw & MASK_Error) == 0; }
@@ -278,8 +278,8 @@ class DefaultHomingMode: public HomingMode{
     };
     bool error(canopen::LayerStatus &status, const std::string& msg) { execute_= false; status.error(msg); return false; }
 public:
-    DefaultHomingMode(ObjectStorageSharedPtr storage) {
-        storage->entry(homing_method_, 0x6098);
+    DefaultHomingMode(ObjectStorageSharedPtr storage, uint16_t cmd_offset) {
+        storage->entry(homing_method_, 0x6098 + cmd_offset);
     }
     virtual bool start();
     virtual bool read(const uint16_t &sw);
@@ -294,16 +294,17 @@ public:
 
     Motor402(const std::string &name, ObjectStorageSharedPtr storage, const canopen::Settings &settings)
     : MotorBase(name), status_word_(0),control_word_(0),
+      cmd_offset_(settings.get_optional<unsigned int>("cmd_offset", 0)),
       switching_state_(State402::InternalState(settings.get_optional<unsigned int>("switching_state", static_cast<unsigned int>(State402::Operation_Enable)))),
       monitor_mode_(settings.get_optional<bool>("monitor_mode", true)),
       state_switch_timeout_(settings.get_optional<unsigned int>("state_switch_timeout", 5))
     {
-        storage->entry(status_word_entry_, 0x6041);
-        storage->entry(control_word_entry_, 0x6040);
-        storage->entry(op_mode_display_, 0x6061);
-        storage->entry(op_mode_, 0x6060);
+        storage->entry(status_word_entry_, 0x6041 + cmd_offset_);
+        storage->entry(control_word_entry_, 0x6040 + cmd_offset_);
+        storage->entry(op_mode_display_, 0x6061 + cmd_offset_);
+        storage->entry(op_mode_, 0x6060 + cmd_offset_);
         try{
-            storage->entry(supported_drive_modes_, 0x6502);
+            storage->entry(supported_drive_modes_, 0x6502 + cmd_offset_);
         }
         catch(...){
         }
@@ -321,16 +322,16 @@ public:
         })).second;
     }
 
-    virtual void registerDefaultModes(ObjectStorageSharedPtr storage){
-        registerMode<ProfiledPositionMode> (MotorBase::Profiled_Position, storage);
-        registerMode<VelocityMode> (MotorBase::Velocity, storage);
-        registerMode<ProfiledVelocityMode> (MotorBase::Profiled_Velocity, storage);
-        registerMode<ProfiledTorqueMode> (MotorBase::Profiled_Torque, storage);
-        registerMode<DefaultHomingMode> (MotorBase::Homing, storage);
-        registerMode<InterpolatedPositionMode> (MotorBase::Interpolated_Position, storage);
-        registerMode<CyclicSynchronousPositionMode> (MotorBase::Cyclic_Synchronous_Position, storage);
-        registerMode<CyclicSynchronousVelocityMode> (MotorBase::Cyclic_Synchronous_Velocity, storage);
-        registerMode<CyclicSynchronousTorqueMode> (MotorBase::Cyclic_Synchronous_Torque, storage);
+    virtual void registerDefaultModes(ObjectStorageSharedPtr storage, uint16_t cmd_offset){
+        registerMode<ProfiledPositionMode> (MotorBase::Profiled_Position, storage, cmd_offset);
+        registerMode<VelocityMode> (MotorBase::Velocity, storage, cmd_offset);
+        registerMode<ProfiledVelocityMode> (MotorBase::Profiled_Velocity, storage, cmd_offset);
+        registerMode<ProfiledTorqueMode> (MotorBase::Profiled_Torque, storage, cmd_offset);
+        registerMode<DefaultHomingMode> (MotorBase::Homing, storage, cmd_offset);
+        registerMode<InterpolatedPositionMode> (MotorBase::Interpolated_Position, storage, cmd_offset);
+        registerMode<CyclicSynchronousPositionMode> (MotorBase::Cyclic_Synchronous_Position, storage, cmd_offset);
+        registerMode<CyclicSynchronousVelocityMode> (MotorBase::Cyclic_Synchronous_Velocity, storage, cmd_offset);
+        registerMode<CyclicSynchronousTorqueMode> (MotorBase::Cyclic_Synchronous_Torque, storage, cmd_offset);
     }
 
     class Allocator : public MotorBase::Allocator{
@@ -356,6 +357,7 @@ private:
     bool switchMode(LayerStatus &status, uint16_t mode);
     bool switchState(LayerStatus &status, const State402::InternalState &target);
 
+    uint16_t cmd_offset_;
     std::atomic<uint16_t> status_word_;
     uint16_t control_word_;
     boost::mutex cw_mutex_;
