@@ -74,11 +74,17 @@ bool MotorChain::nodeAdded(XmlRpc::XmlRpcValue &params, const canopen::NodeShare
             return false;
         }
 
+        MergedXmlRpcStruct merged;
+        merged = MergedXmlRpcStruct(params, merged);
+        if (currentMotor.hasMember("defaults")) {
+          merged = MergedXmlRpcStruct(currentMotor["defaults"], merged);
+        }
+
         motor->registerDefaultModes(node->getStorage(), cmd_offset);
         motors_->add(motor);
         logger->add(motor);
 
-        HandleLayerSharedPtr handle = std::make_shared<HandleLayer>(joint, motor, node->getStorage(), params);
+        HandleLayerSharedPtr handle = std::make_shared<HandleLayer>(joint, motor, node->getStorage(), merged);
 
         canopen::LayerStatus s;
         if(!handle->prepareFilters(s)){
