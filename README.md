@@ -14,14 +14,15 @@ The released version gets synced over to the distro branch for each release.
 
 # Installation
 
-Clone this repository into a catkin workspace:
+Clone this repository into a catkin workspace.
 
 ```bash
-ros@ros-usb:~/catkin_ws/src$ git clone git@gitlab.com:kea-robotics/industry_projects/21_amr/ros_canopen.git
+cd ~/catkin_ws/src
+git clone git@gitlab.com:kea-robotics/industry_projects/21_amr/ros_canopen.git
 ```
 
 Then, install system dependencies using `rosdep`:
 
 ```bash
-ros@ros-usb:~/catkin_ws/src$ rosdep install --from-paths ros_canopen --ignore-src -r -y
+rosdep install --from-paths ros_canopen --ignore-src -r -y
 ```
